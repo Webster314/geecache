@@ -12,7 +12,6 @@ type Cache struct{
     onEvicted  func(string, Value);
 }
 
-
 type Value interface{
     Len() int
 }
@@ -22,7 +21,7 @@ type Entry struct{
     v Value;
 }
 
-func New(maxBytes uint64, onEvicted func(string, Value)) (*Cache){
+func New(maxBytes uint64, onEvicted func(string, Value)) (*Cache) {
     return &Cache{
         maxBytes   : maxBytes,
         ll         : list.New(),
@@ -31,20 +30,16 @@ func New(maxBytes uint64, onEvicted func(string, Value)) (*Cache){
     }
 }
 
-func (c * Cache)Len() int{
-    return c.ll.Len()
-}
-
-func (c *Cache)Get(k string) (value Value, ok bool){
+func (c *Cache)Get(k string) (Value, bool) {
     if ele, ok := c.cache[k]; ok{
         kv := ele.Value.(*Entry)
         c.ll.MoveToFront(ele)
         return kv.v, true 
     }
-    return
+    return nil, false
 }
 
-func (c *Cache)RemoveOldest(){
+func (c *Cache)RemoveOldest() {
     if ele := c.ll.Back(); ele != nil{
         c.ll.Remove(ele)
         kv := ele.Value.(*Entry)
@@ -56,7 +51,7 @@ func (c *Cache)RemoveOldest(){
     }
 }
 
-func (c *Cache)Add(k string, v Value){
+func (c *Cache)Add(k string, v Value) {
     if ele, ok := c.cache[k]; ok{
         c.ll.MoveToFront(ele)
         kv := ele.Value.(*Entry)
@@ -64,11 +59,18 @@ func (c *Cache)Add(k string, v Value){
         c.nBytes += (uint64(v.Len()) - uint64(kv.v.Len()))
     }else{
         kv := Entry{ k : k, v : v }
-        ele := c.ll.PushFront(&kv)
+        ele = c.ll.PushFront(&kv)
         c.cache[k] = ele
         c.nBytes += uint64(len(k)) + uint64(v.Len())
     }
-    for c.maxBytes != 0 && c.maxBytes < c.nBytes{
+    if c.maxBytes == 0 {
+        return
+    }
+    for c.maxBytes < c.nBytes {
         c.RemoveOldest()
     }
+}
+
+func (c * Cache)Len() int {
+    return c.ll.Len()
 }
